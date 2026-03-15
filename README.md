@@ -1,9 +1,17 @@
 # Ti.me
-Tiny widget that displays the current time.
 
-Always used Time.is as a neat widget as I like having the current time on my monitor; it helps me keep track of everything you know. I was like hey why don't I make my own tiny widget the way I like it.
+A small Vista-style clock widget: analog face with red second hand, plus time and date underneath. Uses your system’s local time. No network, no settings.
 
-So here we are; Ti.me.
+- **Analog clock** – Dark glass look, hour markers, red second hand.
+- **One line** – Time (24h) and date, e.g. `14:35  Mon, 15 Mar`.
+- Always on top, rounded corners on Windows.
 
-The application is almost there. 
-More to come soon.（＊＾Ｕ＾）人（≧Ｖ≦＊）/
+**Requirements:** Python 3.8+, Windows (for rounded corners).
+
+```bash
+git clone https://github.com/bigtajine/Ti.me.git
+cd Ti.me
+python time.py
+```
+
+Put `time.ico` in the same folder for a custom taskbar icon (optional).

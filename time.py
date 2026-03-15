@@ -1,268 +1,110 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-# File name: Time.py
-# Author: BigTajine
-# Date created: 31/08/2022
-# Date last modified: 18/09/2022
-# Python version: 3.10.7
-
 """
-This is the source code of Ti.me; inspired by Time.is.
-Ti.me uses the public IP address of your device and uses
-an IP Geolocation API to figure out your location.
+Ti.me – Vista-style clock widget.
+Shows analog clock + time and date. Uses your system’s local time.
+Author: BigTajine
 """
-
-# Imports
 
 from ctypes import windll
 from datetime import datetime
-from dateutil import tz
-from tkinter import *
+import math
+import tkinter as tk
 from tkinter import font as tkFont
-import json
-import requests
-import sys
-import time
-import tkinter.messagebox
-import urllib.request
 
-# Fixes blurry text encountered when using display scalling.
+try:
+    windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    pass
 
-windll.shcore.SetProcessDpiAwareness(1)
+# Vista-style (dark glass)
+BG_COLOR = "#1a2332"
+BG_ALPHA = 0.92
+FACE_BG = "#0d1117"
+RIM_COLOR = "#3d4f5f"
+TICK_COLOR = "#8b9cad"
+HAND_HOUR = "#e8eaed"
+HAND_MINUTE = "#e8eaed"
+HAND_SECOND = "#c5221f"
+TEXT_COLOR = "#e0e6ed"
+TEXT_DIM = "#8b9cad"
 
-# Initialization.
+app = tk.Tk()
+ratio = app.winfo_screenwidth() / 2560
+width = max(160, int(ratio * 180))
+height = max(180, int(ratio * 200))
 
+app.title("Ti.me")
+app.attributes("-topmost", True)
+app.attributes("-alpha", BG_ALPHA)
+app.configure(bg=BG_COLOR)
+app.resizable(False, False)
+app.geometry(f"{width}x{height}")
+try:
+    app.iconbitmap("time.ico")
+except Exception:
+    pass
 
-app = Tk()
-SCREEN_WIDTH, SCREEN_HEIGHT = app.winfo_screenwidth(), app.winfo_screenheight()
-RATIO = SCREEN_WIDTH / 2560
-appwidth = int(RATIO * 390)
-appheight = int(RATIO * 220)
-app.attributes('-topmost', True, '-alpha', 1)
-app.configure(bg='#BFB9FA')
-app.geometry(str(appwidth)+"x"+str(appheight))
-app.iconbitmap('time.ico')
-app.resizable(0, 0)
-app.title('Ti.me')
-
-# Miscellaneous.
-
-button_pressed = 0
-count_column = 0
-monserrat_8 = tkFont.Font(family='Monserrat', size=8)
-
-# Functions
-
-
-def get_date():
-    current_date = time.strftime('%a, %d %b %Y')
-    date_label.config(text=current_date)
-    date_label.after(200, get_date)
+app.option_add("*Background", BG_COLOR)
+app.option_add("*Foreground", TEXT_COLOR)
 
 
-def get_labels():
-    Grid.rowconfigure(app,0,weight=1)
-    Grid.columnconfigure(app,0,weight=1)
-    Grid.rowconfigure(app,1,weight=1)
-    Grid.rowconfigure(app,2,weight=1)
-    Grid.rowconfigure(app,3,weight=1)
-    Grid.rowconfigure(app,4,weight=1)
-    # Grid based solution that allows me to put only a specific word in bold
-    # text; Label doesn't allow this out of the box.
-
-    label_frame = Frame(app, bg='#BFB9FA')
-    label_frame.grid(row=0, column=0)
-
-    # Allows Ti.me to be launched in the event of an exception (ie. offline,
-    # timeout, etc.)
-
+def set_rounded_region(widget, radius=12):
     try:
-
-        # Ensures that a redundant Label isn't created.
-
-        if len(dec_ip['city']) != 0:
-
-            # Continuation of the Grid based solution.
-
-            Label(label_frame, text='Time in ', font=('Lato', 11),
-                  fg='#333333', bg='#BFB9FA').grid(row=0, column=0)
-
-            Label(
-                label_frame,
-                text=dec_ip['city'] +
-                ', ',
-                font=(
-                    'Lato',
-                    11,
-                    'bold'),
-                fg='#333333',
-                bg='#BFB9FA').grid(
-                row=0,
-                column=1)
-
-            Label(label_frame, text=dec_ip['countryCode'] + ' now',
-                  font=('Lato', 11), fg='#333333', bg='#BFB9FA'
-                  ).grid(row=0, column=2)
-    except BaseException:
-
-        Label(label_frame, text='Time at ', font=('Lato', 11),
-              fg='#333333', bg='#BFB9FA').grid(row=0, column=0)
-
-        Label(label_frame, text='Local, ', font=('Lato', 11, 'bold'),
-              fg='#333333', bg='#BFB9FA').grid(row=0, column=1)
-
-        Label(label_frame, text='NA now', font=('Lato', 11),
-              fg='#333333', bg='#BFB9FA').grid(row=0, column=2)
-
-    # Allows the function get_time to access the variable.
-
-    global time_label
-    time_label = Label(app, font=('Montserrat', 28, 'bold'),
-                       fg='#333333', bg='#BFB9FA')
-    time_label.grid(row=1, column=0)
-
-    # Allows the function get_date to access the variable.
-
-    global date_label
-    date_label = Label(app, font=('Lato', 11), fg='#333333',
-                       bg='#BFB9FA')
-    date_label.grid(row=2, column=0)
-
-    # date_label was too close to the button_frame so I created a spacer of
-    # value 1.
-
-    spacer = Label(app, text='', font=('Lato', 1), fg='#333333',
-                   bg='#BFB9FA')
-    spacer.grid(row=3, column=0)
-
-    # Applying the same grid based solution allowing to me to align the
-    # buttons in an aestetically pleasing manner.
-
-    button_frame = Frame(app, bg='#BFB9FA')
-    button_frame.grid(row=4, column=0)
-
-    def button(
-        x,
-        y,
-        text,
-        bcolor,
-        fcolor,
-        cmd,
-        row,
-        column,
-    ):
-
-        def on_enter(e):
-            new_button['background'] = fcolor
-            new_button['foreground'] = bcolor
-
-        def on_leave(e):
-            new_button['background'] = bcolor
-            new_button['foreground'] = fcolor
-
-        new_button = Button(
-            button_frame,
-            width=9,
-            height=1,
-            text=text,
-            font=monserrat_8,
-            fg=fcolor,
-            bg=bcolor,
-            border=0,
-            activeforeground=fcolor,
-            activebackground=bcolor,
-            command=cmd,
-        )
-        new_button.grid(row=row, column=column)
-        new_button.bind('<Enter>', on_enter)
-        new_button.bind('<Leave>', on_leave)
-
-    button(
-        0,
-        0,
-        ' AM/PM',
-        '#e0b9fa',
-        '#333333',
-        lambda: onclick(1),
-        0,
-        0,
-    )
-    button(
-        0,
-        0,
-        'TBA',
-        '#b9fabf',
-        '#333333',
-        lambda: onclick(2),
-        0,
-        1,
-    )
-    button(
-        0,
-        0,
-        'About ',
-        '#b9d4fa',
-        '#333333',
-        lambda: onclick(3),
-        0,
-        2,
-    )
+        hwnd = widget.winfo_id()
+        r = min(radius, width // 2, height // 2)
+        region = windll.gdi32.CreateRoundRectRgn(0, 0, width + 1, height + 1, r, r)
+        windll.user32.SetWindowRgn(hwnd, region, 1)
+    except Exception:
+        pass
 
 
-def get_location():
-    try:
-        ip_api = 'http://ip-api.com/json/'
-        request_ip = urllib.request.Request(ip_api)
-        ip = urllib.request.urlopen(request_ip, timeout=1).read()
-        global dec_ip
-        dec_ip = json.loads(ip.decode('utf-8'))
-    except urllib.error.URLError:
-        None
+clock_center_x = width // 2
+clock_center_y = 58
+clock_radius = 44
 
 
-def get_time():
-    from_zone = tz.gettz('UTC')
-    try:
-        to_zone = tz.gettz(dec_ip['timezone'])
-    except NameError:
-        to_zone = tz.gettz('local')
-    utc_now = datetime.utcnow()
-    utc = utc_now.replace(tzinfo=from_zone)
-    local = utc.astimezone(to_zone)
-    nyc = utc.astimezone(to_zone)
-    if button_pressed == 0:
-        time_now = local.strftime('%H:%M:%S')
-        nyc_now = nyc.strftime('%H:%M')
-    if button_pressed != 0:
-        time_now = local.strftime('%I:%M %p')
-        nyc_now = nyc.strftime('%I:%M')
-    time_label.config(text=time_now)
-    time_label.after(200, get_time)
+def tick():
+    canvas.delete("face")
+    canvas.delete("ticks")
+    canvas.delete("hands")
+    cx, cy, r = clock_center_x, clock_center_y, clock_radius
+    now = datetime.now()
+    sec = now.second + now.microsecond / 1e6
+    min_ = now.minute + sec / 60
+    hour = (now.hour % 12) + min_ / 60
+
+    canvas.create_oval(cx - r + 2, cy - r + 2, cx + r - 2, cy + r - 2, fill=FACE_BG, outline=RIM_COLOR, width=2, tags="face")
+    for i in range(12):
+        angle = (i * 30 - 90) * math.pi / 180
+        inner_r = r - 12 if i % 3 == 0 else r - 8
+        x1 = cx + inner_r * math.cos(angle)
+        y1 = cy + inner_r * math.sin(angle)
+        x2 = cx + (r - 2) * math.cos(angle)
+        y2 = cy + (r - 2) * math.sin(angle)
+        canvas.create_line(x1, y1, x2, y2, fill=TICK_COLOR, width=2 if i % 3 == 0 else 1, tags="ticks")
+    for angle_deg, hand_r, color, w in [
+        (sec * 6 - 90, r - 10, HAND_SECOND, 1),
+        (min_ * 6 - 90, r - 14, HAND_MINUTE, 2),
+        (hour * 30 - 90, r - 26, HAND_HOUR, 3),
+    ]:
+        rad = angle_deg * math.pi / 180
+        canvas.create_line(cx, cy, cx + hand_r * math.cos(rad), cy + hand_r * math.sin(rad), fill=color, width=w, tags="hands")
+
+    bottom_label.config(text=now.strftime("%H:%M  %a, %d %b"))
+    app.after(200, tick)
 
 
-def onclick(args):
-    if args == 1:
-        global button_pressed
-        if button_pressed == 0:
-            button_pressed = 1
-        elif button_pressed != 0:
-            button_pressed = 0
+# Analog clock
+canvas = tk.Canvas(app, width=width, height=clock_center_y + clock_radius + 6, bg=BG_COLOR, highlightthickness=0)
+canvas.pack(pady=(8, 4))
 
-    if args == 2:
-        tkinter.messagebox.showinfo('Ti.me',
-                                    'This function isn\'t avaliable yet')
+# One line: time + date
+font_name = "Segoe UI" if "Segoe UI" in tkFont.families() else "TkDefaultFont"
+bottom_label = tk.Label(app, text="--:--  ---, -- ---", font=(font_name, 10), fg=TEXT_DIM, bg=BG_COLOR)
+bottom_label.pack(pady=(0, 10))
 
-    if args == 3:
-        tkinter.messagebox.showinfo('Ti.me',
-                                    'Ti.me [v0.9.1] (づ｡◕‿‿◕｡)づ\nA @bigTajine creation')
-
-
-# Calling the functions below to allow for more order and oversight.
-
-get_location()
-get_labels()
-get_time()
-get_date()
-
+app.after(0, tick)
+app.update_idletasks()
+app.after(50, lambda: set_rounded_region(app))
 app.mainloop()
