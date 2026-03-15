@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Ti.me – Vista-style clock widget.
-Shows analog clock + time and date. Uses your system’s local time.
+Shows analog clock + time and date. Uses your system's local time.
 Author: BigTajine
 """
 

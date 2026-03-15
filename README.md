@@ -1,9 +1,9 @@
 # Ti.me
 
-A small Vista-style clock widget: analog face with red second hand, plus time and date underneath. Uses your system’s local time. No network, no settings.
+A small Vista-style clock widget: analog face with red second hand, plus time and date underneath. Uses your system's local time. No network, no dependencies.
 
 - **Analog clock** – Dark glass look, hour markers, red second hand.
-- **One line** – Time (24h) and date, e.g. `14:35  Mon, 15 Mar`.
+- **Time + date** – e.g. `14:35  Mon, 15 Mar`.
 - Always on top, rounded corners on Windows.
 
 **Requirements:** Python 3.8+, Windows (for rounded corners).
